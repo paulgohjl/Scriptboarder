@@ -86,19 +86,27 @@ _PANEL = None
 
 
 def progress_panel():
-    """A ProgressPanel on a root built once per process and never destroyed.
+    """A ProgressPanel on the process's live Tk root, built once and never destroyed.
 
-    ttkbootstrap's <Destroy> binding fires ThemeChanged on a dead app when a
-    suite churns roots; see the note in tests/test_dnd.py.
+    ttkbootstrap allows a single root per process (Style is bound to it), and
+    tests/test_dnd.py already builds the app's window in the same discovery
+    run — creating a second ttkb.Window raises. So reuse tkinter's live root
+    when there is one, and only stand up a root when this suite runs alone.
+    ttkbootstrap's <Destroy> binding also fires ThemeChanged on a dead app
+    when a suite churns roots; see the note in tests/test_dnd.py.
     """
     global _PANEL
     if _PANEL is None:
-        import ttkbootstrap as ttkb
+        import tkinter as tk
 
         from gui.progress_panel import ProgressPanel
 
-        root = ttkb.Window(themename="darkly")
-        root.withdraw()
+        root = tk._default_root
+        if root is None:
+            import ttkbootstrap as ttkb
+
+            root = ttkb.Window(themename="darkly")
+            root.withdraw()
         _PANEL = ProgressPanel(root)
         root.update()
     return _PANEL
