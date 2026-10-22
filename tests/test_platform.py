@@ -88,6 +88,7 @@ class TestFonts(unittest.TestCase):
 
 
 class TestOpenFile(unittest.TestCase):
+    @unittest.skipIf(not pp.IS_WINDOWS, "os.startfile exists only on Windows")
     def test_windows_uses_startfile(self):
         import utils.platform_paths as mod
 
