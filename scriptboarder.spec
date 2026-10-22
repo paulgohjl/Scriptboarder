@@ -1,17 +1,35 @@
 # scriptboarder.spec — PyInstaller configuration (onedir, fully offline)
 #
 # The build bundles everything the app needs at runtime:
-#   - ffmpeg.exe (vendor/)
+#   - ffmpeg (vendor/ffmpeg.exe on Windows, vendor/ffmpeg on macOS)
 #   - the faster-whisper "medium" model, taken from the local Hugging Face
 #     cache and placed at whisper_models/medium/ (transcriber._resolve_model_arg
 #     loads it from sys._MEIPASS; the app never touches huggingface.co)
-#   - tkinterdnd2's tkdnd native libs (drag-and-drop in frozen builds)
+#   - tkinterdnd2's tkdnd native libraries (drag-and-drop in frozen builds)
 #
-# Output is dist/Scriptboarder/ (exe + support files). Zip that folder to ship.
+# Windows: output is dist/Scriptboarder/ (exe + support files). Zip it to ship.
+# macOS: output is dist/Scriptboarder/ plus dist/Scriptboarder.app.
+#
+# Build on the OS you are shipping for — PyInstaller cannot cross-compile.
 
+import sys
 from pathlib import Path
 
 from PyInstaller.utils.hooks import collect_data_files, collect_submodules
+
+IS_WINDOWS = sys.platform == "win32"
+IS_MACOS = sys.platform == "darwin"
+ffmpeg_bin = "ffmpeg.exe" if IS_WINDOWS else "ffmpeg"
+
+# --- Locate the ffmpeg to bundle ---
+_spec_dir = Path(SPEC).parent
+ffmpeg_to_bundle = _spec_dir / "vendor" / ffmpeg_bin
+if not ffmpeg_to_bundle.is_file():
+    raise SystemExit(
+        f"{ffmpeg_to_bundle} not found. The bundle ships ffmpeg so the app runs "
+        f"offline; put a static build there first. On macOS the easy route is "
+        f"`cp $(which ffmpeg) vendor/ffmpeg` after `brew install ffmpeg`."
+    )
 
 # --- Locate the pre-cached faster-whisper model snapshot ---
 _hub = Path.home() / ".cache" / "huggingface" / "hub" / "models--Systran--faster-whisper-medium"
@@ -49,9 +67,9 @@ a = Analysis(
     ['src/main.py'],
     # main.py's sys.path.insert is a no-op in the frozen app (its __file__
     # lives in the bundle), so Analysis must see src/ to collect gui/, utils/, ...
-    pathex=[str(Path(SPEC).parent / 'src')],
+    pathex=[str(_spec_dir / 'src')],
     binaries=[
-        ('vendor/ffmpeg.exe', '.'),
+        (str(ffmpeg_to_bundle), '.'),
     ],
     datas=datas,
     hiddenimports=hiddenimports,
@@ -78,6 +96,15 @@ a = Analysis(
 
 pyz = PYZ(a.pure)
 
+# target_arch is Windows-only (and macOS-only in newer PyInstaller for
+# cross-building); leaving it unset builds for the host architecture.
+exe_kwargs = {}
+if IS_WINDOWS:
+    exe_kwargs['target_arch'] = 'x86_64'
+
+# UPX cannot pack Mach-O binaries, and is not installed on macOS runners.
+compress = {'strip': False, 'upx': IS_WINDOWS, 'upx_exclude': []}
+
 exe = EXE(
     pyz,
     a.scripts,
@@ -86,23 +113,34 @@ exe = EXE(
     name='Scriptboarder',
     debug=False,
     bootloader_ignore_signals=False,
-    strip=False,
-    upx=True,
-    upx_exclude=[],
     console=False,
     disable_windowed_traceback=False,
     argv_emulation=False,
-    target_arch='x86_64',
     codesign_identity=None,
     entitlements_file=None,
+    **exe_kwargs,
 )
 
 coll = COLLECT(
     exe,
     a.binaries,
     a.datas,
-    strip=False,
-    upx=True,
-    upx_exclude=[],
     name='Scriptboarder',
+    **compress,
 )
+
+if IS_MACOS:
+    BUNDLE(
+        coll,
+        name='Scriptboarder.app',
+        bundle_identifier='com.paulgoh.scriptboarder',
+        info_plist={
+            'NSHighResolutionCapable': True,
+            # macOS asks the user before an app may read ~/Documents, which is
+            # the default output folder; these supply the wording of that ask.
+            'NSDocumentsFolderUsageDescription':
+                'Scriptboarder writes the transcript document you choose to your Documents folder.',
+            'NSDownloadsFolderUsageDescription':
+                'Scriptboarder reads the video file you drop on it.',
+        },
+    )

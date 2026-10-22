@@ -29,8 +29,14 @@ from xlsx_gen.generator import generate_xlsx
 from html_gen.html_generator import generate_html
 from utils.deps import ensure_ffmpeg_path
 from utils import applog
+from utils import platform_paths as pp
 
-# Windows refuses these in a file name; the Document name field is free text.
+UI_FONT = pp.ui_font()
+
+# Characters Windows refuses in a file name; the Document name field is free
+# text. macOS only rejects "/" and a leading ":", so this is the stricter
+# superset — one sanitiser keeps a name valid on both, at the cost of turning
+# "<" into "_" on macOS where it would have been legal.
 _INVALID_NAME_CHARS = re.compile(r'[<>:"/\\|?*\x00-\x1f]')
 _RESERVED_NAMES = (
     {"CON", "PRN", "AUX", "NUL"}
@@ -43,7 +49,7 @@ def safe_output_name(raw: str, ext: str) -> str:
     """Turn the Document name field into one valid file name.
 
     The field is free text, so it can carry a path (which would point at a
-    directory the pipeline never creates) or characters Windows rejects — both
+    directory the pipeline never creates) or characters the OS rejects — both
     fail at the very end of a run, after transcription is already spent.
     """
     name = raw.strip()
@@ -119,7 +125,7 @@ class MainWindow:
         # Title
         self.title = ttkb.Label(
             main, text="Scriptboarder",
-            font=("Segoe UI", 20, "bold"), bootstyle=PRIMARY
+            font=(UI_FONT, 20, "bold"), bootstyle=PRIMARY
         )
         self.title.pack(pady=(0, 15))
 
@@ -153,9 +159,9 @@ class MainWindow:
         # --- Config Phase ---
         info_frame = ttkb.Frame(self.frame_config)
         info_frame.pack(fill=X, pady=(0, 15))
-        ttkb.Label(info_frame, text="Video Info:", font=("Segoe UI", 12, "bold")).pack(anchor=W)
+        ttkb.Label(info_frame, text="Video Info:", font=(UI_FONT, 12, "bold")).pack(anchor=W)
 
-        self.info_text = ttkb.Label(info_frame, text="", font=("Segoe UI", 10))
+        self.info_text = ttkb.Label(info_frame, text="", font=(UI_FONT, 10))
         self.info_text.pack(anchor=W, pady=(5, 0))
 
         config_frame = ttkb.LabelFrame(self.frame_config, text="Options")
@@ -164,7 +170,7 @@ class MainWindow:
         # Sensitivity
         sens_frame = ttkb.Frame(config_frame)
         sens_frame.pack(fill=X, pady=5)
-        ttkb.Label(sens_frame, text="Scene sensitivity:", font=("Segoe UI", 10)).pack(side=LEFT, padx=(0, 10))
+        ttkb.Label(sens_frame, text="Scene sensitivity:", font=(UI_FONT, 10)).pack(side=LEFT, padx=(0, 10))
         self.sensitivity = ttkb.StringVar(value="medium")
         ttkb.Radiobutton(sens_frame, text="Low", variable=self.sensitivity, value="low").pack(side=LEFT, padx=5)
         ttkb.Radiobutton(sens_frame, text="Medium", variable=self.sensitivity, value="medium").pack(side=LEFT, padx=5)
@@ -173,8 +179,8 @@ class MainWindow:
         # Output path
         out_frame = ttkb.Frame(config_frame)
         out_frame.pack(fill=X, pady=(10, 0))
-        ttkb.Label(out_frame, text="Output folder:", font=("Segoe UI", 10)).pack(side=LEFT, padx=(0, 10))
-        self.output_var = ttkb.StringVar(value=str(Path.home() / "Documents"))
+        ttkb.Label(out_frame, text="Output folder:", font=(UI_FONT, 10)).pack(side=LEFT, padx=(0, 10))
+        self.output_var = ttkb.StringVar(value=str(pp.documents_dir()))
         self.output_entry = ttkb.Entry(out_frame, textvariable=self.output_var, width=50)
         self.output_entry.pack(side=LEFT, fill=X, expand=True, padx=(0, 5))
         ttkb.Button(
@@ -185,17 +191,17 @@ class MainWindow:
         # Video name
         name_frame = ttkb.Frame(config_frame)
         name_frame.pack(fill=X, pady=(10, 0))
-        ttkb.Label(name_frame, text="Document name:", font=("Segoe UI", 10)).pack(side=LEFT, padx=(0, 10))
+        ttkb.Label(name_frame, text="Document name:", font=(UI_FONT, 10)).pack(side=LEFT, padx=(0, 10))
         base_name = Path(self.video_path).stem if self.video_path else "transcript"
         self.name_var = ttkb.StringVar(value=f"{base_name}_annotated")
         ttkb.Entry(name_frame, textvariable=self.name_var, width=30).pack(side=LEFT)
-        self._name_ext_label = ttkb.Label(name_frame, text=".xlsx", font=("Segoe UI", 10))
+        self._name_ext_label = ttkb.Label(name_frame, text=".xlsx", font=(UI_FONT, 10))
         self._name_ext_label.pack(side=LEFT)
 
         # Output format
         fmt_frame = ttkb.Frame(config_frame)
         fmt_frame.pack(fill=X, pady=(10, 0))
-        ttkb.Label(fmt_frame, text="Output format:", font=("Segoe UI", 10)).pack(side=LEFT, padx=(0, 10))
+        ttkb.Label(fmt_frame, text="Output format:", font=(UI_FONT, 10)).pack(side=LEFT, padx=(0, 10))
         self.output_format_var = ttkb.StringVar(value="xlsx")
         ttkb.Radiobutton(fmt_frame, text="XLSX", variable=self.output_format_var, value="xlsx",
                          command=self._on_format_change).pack(side=LEFT, padx=5)
@@ -216,7 +222,7 @@ class MainWindow:
         self.result_text = ttkb.Label(
             self.frame_result,
             text="Processing complete!",
-            font=("Segoe UI", 14),
+            font=(UI_FONT, 14),
             bootstyle=SUCCESS,
         )
         self.result_text.pack(pady=(0, 10))
@@ -412,7 +418,7 @@ class MainWindow:
 
     def _open_output(self):
         if self.output_path and os.path.exists(self.output_path):
-            os.startfile(self.output_path)
+            pp.open_file(self.output_path)
 
     def _reset(self):
         """Reset to input phase."""

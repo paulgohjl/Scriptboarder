@@ -102,13 +102,16 @@ def progress_panel():
         from gui.progress_panel import ProgressPanel
 
         root = tk._default_root
-        if root is None:
-            import ttkbootstrap as ttkb
+        try:
+            if root is None:
+                import ttkbootstrap as ttkb
 
-            root = ttkb.Window(themename="darkly")
-            root.withdraw()
-        _PANEL = ProgressPanel(root)
-        root.update()
+                root = ttkb.Window(themename="darkly")
+                root.withdraw()
+            _PANEL = ProgressPanel(root)
+            root.update()
+        except tk.TclError as exc:
+            raise unittest.SkipTest(f"no display available for Tk: {exc}")
     return _PANEL
 
 

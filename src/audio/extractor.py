@@ -1,10 +1,11 @@
 """Audio extraction from video using ffmpeg subprocess."""
 
 import subprocess
-import sys
 import tempfile
 from pathlib import Path
 from typing import Optional
+
+from utils.platform_paths import find_ffmpeg
 
 
 def extract_audio(
@@ -41,19 +42,9 @@ def extract_audio(
 
 
 def _find_ffmpeg() -> str:
-    """Find ffmpeg binary, checking PyInstaller bundle, vendor dir, AppData, then PATH."""
-    meipass = getattr(sys, "_MEIPASS", None)
-    if meipass:
-        bundled = Path(meipass) / "ffmpeg.exe"
-        if bundled.exists():
-            return str(bundled)
+    """Deprecated alias for utils.platform_paths.find_ffmpeg.
 
-    env_path = Path(__file__).parent.parent.parent / "vendor" / "ffmpeg.exe"
-    if env_path.exists():
-        return str(env_path)
-
-    appdata = Path.home() / "AppData" / "Local" / "scriptboarder" / "ffmpeg.exe"
-    if appdata.exists():
-        return str(appdata)
-
-    return "ffmpeg"
+    Kept for the existing tests; the app passes the path it resolved in
+    utils.deps into extract_audio(ffmpeg_path=...) instead of calling this.
+    """
+    return find_ffmpeg()

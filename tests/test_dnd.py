@@ -46,14 +46,23 @@ _APP = None
 
 
 def app_instance():
-    """The main window, built once per process and left alive."""
+    """The main window, built once per process and left alive.
+
+    Skips when the platform has no window server to draw on (a headless macOS
+    runner), which is a property of the machine, not of the app.
+    """
     global _APP
     if _APP is None:
+        import tkinter as tk
+
         from gui.app import MainWindow
         from utils import applog
 
         applog.setup_logging(Path(tempfile.mkdtemp()))
-        _APP = MainWindow()
+        try:
+            _APP = MainWindow()
+        except tk.TclError as exc:
+            raise unittest.SkipTest(f"no display available for Tk: {exc}")
         _APP.root.withdraw()
         _APP.root.update()
     return _APP

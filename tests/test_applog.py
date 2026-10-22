@@ -74,13 +74,13 @@ class TestAppLog(unittest.TestCase):
     def test_setup_logging_never_raises(self):
         from utils import applog
 
-        # Unwritable everywhere: both default dir and temp dir are files
+        # Unwritable everywhere: every candidate dir is a file
         real_gettempdir = tempfile.gettempdir
-        real_default = applog.default_log_dir
+        real_candidates = applog.log_dir_candidates
         blocker = Path(tempfile.mkdtemp()) / "blocker2"
         blocker.write_text("not a dir")
         tempfile.gettempdir = lambda: str(blocker)
-        applog.default_log_dir = lambda: blocker
+        applog.log_dir_candidates = lambda: [blocker]
         try:
             path = applog.setup_logging()
             self.assertIsNone(path)
@@ -89,7 +89,7 @@ class TestAppLog(unittest.TestCase):
             applog.log_error("y", RuntimeError("z"))
         finally:
             tempfile.gettempdir = real_gettempdir
-            applog.default_log_dir = real_default
+            applog.log_dir_candidates = real_candidates
 
 
 if __name__ == "__main__":

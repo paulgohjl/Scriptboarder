@@ -8,17 +8,32 @@ on:
 
 jobs:
   test:
-    runs-on: ubuntu-latest
+    runs-on: ${{ matrix.os }}
     strategy:
       fail-fast: false
       matrix:
-        python-version: ["3.12", "3.13"]
+        include:
+          - os: ubuntu-latest
+            python-version: "3.12"
+          - os: ubuntu-latest
+            python-version: "3.13"
+          # The two shipping targets, each tested on the OS that ships them:
+          # the Windows branches (ffmpeg.exe, %LOCALAPPDATA%, os.startfile)
+          # and the macOS branches (ffmpeg, Application Support, `open`,
+          # .app bundle) only run on their own platform.
+          - os: macos-latest
+            python-version: "3.13"
+          - os: windows-latest
+            python-version: "3.13"
     steps:
       - uses: actions/checkout@v5
 
       # The suite builds real Tk windows (drop zone, progress panel), which
-      # need Tcl/Tk and a display the runner does not have.
+      # need Tcl/Tk and a display the Linux runner does not have. macOS and
+      # Windows runners have a window session, and their Python already
+      # includes Tcl/Tk.
       - name: Install Tkinter and a virtual display
+        if: runner.os == 'Linux'
         run: |
           sudo apt-get update
           sudo apt-get install -y --no-install-recommends python3-tk xvfb
@@ -39,5 +54,10 @@ jobs:
 
       # No network step: transcription tests mock WhisperModel, and the app
       # loads models with local_files_only=True.
-      - name: Tests
+      - name: Tests (Linux)
+        if: runner.os == 'Linux'
         run: xvfb-run --auto-servernum python -m unittest discover -s tests -v
+
+      - name: Tests (macOS / Windows)
+        if: runner.os != 'Linux'
+        run: python -m unittest discover -s tests -v

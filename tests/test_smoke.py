@@ -15,6 +15,7 @@ class TestImports(unittest.TestCase):
         import audio.transcriber  # noqa: F401
         import html_gen.html_generator  # noqa: F401
         import utils.deps  # noqa: F401
+        import utils.platform_paths  # noqa: F401
         import video.metadata  # noqa: F401
         import video.scene_detector  # noqa: F401
         import video.screenshot  # noqa: F401
@@ -27,17 +28,23 @@ class TestImports(unittest.TestCase):
         typing.get_type_hints(audio.extractor.extract_audio)
 
     def test_ffmpeg_finder_checks_meipass(self):
-        """Packaged builds bundle ffmpeg.exe at sys._MEIPASS; finders must check it.
+        """Packaged builds bundle ffmpeg at sys._MEIPASS; finders must check it.
 
-        AppData cache intentionally wins when present (it's the canonical copy),
-        so point Path.home() at an empty dir to exercise the bundle path.
+        The bundle wins over the download cache, so a packaged app uses its
+        pinned ffmpeg. Path.home() is pointed at an empty dir so a copy
+        downloaded by an earlier source run cannot satisfy the lookup on
+        either platform, and the binary name is taken from the platform layer
+        because macOS has no .exe suffix.
         """
         import tempfile
         from unittest.mock import patch
 
+        from utils.platform_paths import ffmpeg_binary_name
+
+        binary = ffmpeg_binary_name()
         fake_meipass = Path(tempfile.gettempdir()) / "sb_test_meipass"
         fake_meipass.mkdir(exist_ok=True)
-        (fake_meipass / "ffmpeg.exe").write_bytes(b"x")
+        (fake_meipass / binary).write_bytes(b"x")
         fake_home = Path(tempfile.gettempdir()) / "sb_test_home"
         fake_home.mkdir(exist_ok=True)
 
@@ -47,15 +54,15 @@ class TestImports(unittest.TestCase):
         old = getattr(sys, "_MEIPASS", None)
         sys._MEIPASS = str(fake_meipass)
         try:
-            self.assertEqual(audio.extractor._find_ffmpeg(), str(fake_meipass / "ffmpeg.exe"))
             with patch("pathlib.Path.home", return_value=fake_home):
-                self.assertEqual(utils.deps.ensure_ffmpeg_path(), str(fake_meipass / "ffmpeg.exe"))
+                self.assertEqual(audio.extractor._find_ffmpeg(), str(fake_meipass / binary))
+                self.assertEqual(utils.deps.ensure_ffmpeg_path(), str(fake_meipass / binary))
         finally:
             if old is None:
                 del sys._MEIPASS
             else:
                 sys._MEIPASS = old
-            (fake_meipass / "ffmpeg.exe").unlink(missing_ok=True)
+            (fake_meipass / binary).unlink(missing_ok=True)
             fake_meipass.rmdir()
             import shutil
 

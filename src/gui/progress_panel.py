@@ -4,6 +4,11 @@ from tkinter import scrolledtext
 import ttkbootstrap as ttkb
 from ttkbootstrap.constants import *
 
+from utils import platform_paths as pp
+
+UI_FONT = pp.ui_font()
+MONO_FONT = pp.mono_font()
+
 
 class ProgressPanel(ttkb.Frame):
     """Shows processing progress and log output."""
@@ -17,13 +22,13 @@ class ProgressPanel(ttkb.Frame):
             phase_frame = ttkb.Frame(self)
             phase_frame.pack(fill=X, pady=(2, 0))
 
-            lbl = ttkb.Label(phase_frame, text=label, font=("Segoe UI", 9), width=20)
+            lbl = ttkb.Label(phase_frame, text=label, font=(UI_FONT, 9), width=20)
             lbl.pack(side=LEFT, padx=(0, 8))
 
             pbar = ttkb.Progressbar(phase_frame, bootstyle="info-striped", length=300)
             pbar.pack(side=LEFT, fill=X, expand=True)
 
-            lbl_status = ttkb.Label(phase_frame, text="Ready", font=("Segoe UI", 9), foreground="#888")
+            lbl_status = ttkb.Label(phase_frame, text="Ready", font=(UI_FONT, 9), foreground="#888")
             lbl_status.pack(side=LEFT, padx=(8, 0))
 
             self.phases.append((lbl, pbar, lbl_status))
@@ -31,11 +36,11 @@ class ProgressPanel(ttkb.Frame):
         # Log area
         log_frame = ttkb.Frame(self)
         log_frame.pack(fill=BOTH, expand=True, pady=(10, 0))
-        ttkb.Label(log_frame, text="Log:", font=("Segoe UI", 9)).pack(anchor=W)
+        ttkb.Label(log_frame, text="Log:", font=(UI_FONT, 9)).pack(anchor=W)
 
         self.log = scrolledtext.ScrolledText(
             log_frame, height=8, wrap=WORD,
-            font=("Consolas", 9), state=DISABLED,
+            font=(MONO_FONT, 9), state=DISABLED,
             bg="#1a1a1e", fg="#ccc",
         )
         self.log.pack(fill=BOTH, expand=True)

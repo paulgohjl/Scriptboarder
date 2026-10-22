@@ -2,6 +2,10 @@
 
 from tkinter import Canvas
 
+from utils import platform_paths as pp
+
+UI_FONT = pp.ui_font()
+
 
 class DropZone(Canvas):
     """A canvas widget that accepts click-to-browse and file drops.
@@ -19,7 +23,7 @@ class DropZone(Canvas):
 
         self._text = self.create_text(
             250, 75, text="Drop video here\nor click Browse",
-            fill="#888", font=("Segoe UI", 14),
+            fill="#888", font=(UI_FONT, 14),
         )
         self._line = self.create_line(
             50, 145, 450, 145, fill="#3a3a3e", dash=(4, 4),

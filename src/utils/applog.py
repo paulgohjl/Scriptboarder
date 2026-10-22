@@ -11,6 +11,8 @@ import sys
 import tempfile
 from pathlib import Path
 
+from utils import platform_paths as pp
+
 LOGGER_NAME = "scriptboarder"
 LOG_FILENAME = "scriptboarder.log"
 _MAX_BYTES = 2_000_000
@@ -22,6 +24,19 @@ def default_log_dir() -> Path:
     if getattr(sys, "frozen", False):
         return Path(sys.executable).parent
     return Path(__file__).resolve().parents[2]
+
+
+def log_dir_candidates() -> list[Path]:
+    """Where the log may live, best first, temp dir as the last resort.
+
+    A packaged macOS .app in /Applications is not user-writable, so the
+    per-user support folder goes ahead of the bundle folder there.
+    """
+    candidates = [default_log_dir()]
+    if pp.IS_MACOS:
+        candidates.insert(0, pp.cache_dir())
+    candidates.append(Path(tempfile.gettempdir()))
+    return candidates
 
 
 def setup_logging(log_dir: Path | None = None) -> Path | None:
@@ -36,7 +51,7 @@ def setup_logging(log_dir: Path | None = None) -> Path | None:
     if log_dir is not None:
         candidates = [Path(log_dir), Path(tempfile.gettempdir())]
     else:
-        candidates = [default_log_dir(), Path(tempfile.gettempdir())]
+        candidates = log_dir_candidates()
 
     for directory in candidates:
         try:
