@@ -1,0 +1,17 @@
+* text=auto
+
+*.py text
+*.md text
+*.yml text
+*.spec text
+*.txt text
+LICENSE text
+.gitignore text
+
+*.png binary
+*.jpg binary
+*.ico binary
+*.exe binary
+*.onnx binary
+*.zip binary
+*.xlsx binary

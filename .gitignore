@@ -1,0 +1,39 @@
+# Dependencies
+__pycache__/
+*.py[cod]
+*.egg-info/
+.eggs/
+dist/
+build/
+*.egg
+
+# Virtual environment
+.venv/
+venv/
+
+# App data
+vendor/
+temp/
+
+# Runtime logs (RotatingFileHandler writes scriptboarder.log[.1..3])
+*.log
+*.log.[0-9]*
+
+# Tooling / agent scratch
+.qwen/
+.claude/
+
+# IDE
+.vscode/
+.idea/
+*.swp
+*.swo
+
+# OS
+.DS_Store
+Thumbs.db
+
+# PyInstaller generated work files (scriptboarder.spec is source — keep it)
+*.manifest
+*.pyd
+work/

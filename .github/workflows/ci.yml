@@ -1,0 +1,43 @@
+name: CI
+
+on:
+  push:
+    branches: [main]
+  pull_request:
+  workflow_dispatch:
+
+jobs:
+  test:
+    runs-on: ubuntu-latest
+    strategy:
+      fail-fast: false
+      matrix:
+        python-version: ["3.12", "3.13"]
+    steps:
+      - uses: actions/checkout@v4
+
+      # The suite builds real Tk windows (drop zone, progress panel), which
+      # need Tcl/Tk and a display the runner does not have.
+      - name: Install Tkinter and a virtual display
+        run: |
+          sudo apt-get update
+          sudo apt-get install -y --no-install-recommends python3-tk xvfb
+
+      - uses: actions/setup-python@v5
+        with:
+          python-version: ${{ matrix.python-version }}
+          cache: pip
+          cache-dependency-path: requirements.txt
+
+      - name: Install dependencies
+        run: |
+          python -m pip install --upgrade pip
+          pip install -r requirements.txt
+
+      - name: Syntax check
+        run: python -m compileall -q src tests
+
+      # No network step: transcription tests mock WhisperModel, and the app
+      # loads models with local_files_only=True.
+      - name: Tests
+        run: xvfb-run --auto-servernum python -m unittest discover -s tests -v
